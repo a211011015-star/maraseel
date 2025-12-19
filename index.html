@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>نظام إصدار هويات الموظفين</title>
+<title>نظام إدارة هويات الموظفين</title>
 
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <style>
 :root{
@@ -64,6 +63,16 @@ button{
 .btn-primary{background:var(--navy);color:#fff}
 .btn-secondary{background:#fff;border:1px solid var(--border);color:var(--navy)}
 
+.notice{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  display:none;
+}
+.notice.success{background:#dcfce7;color:#166534}
+.notice.error{background:#fee2e2;color:#991b1b}
+
+/* Card */
 .card{
   width:800px;
   height:520px;
@@ -81,15 +90,9 @@ button{
   align-items:center;
   justify-content:center;
 }
-.company-ar{
-  font-size:26px;
-  font-weight:800;
-}
-.company-en{
-  font-size:15px;
-  opacity:.9;
-  direction:ltr;
-}
+.company-ar{font-size:26px;font-weight:800}
+.company-en{font-size:15px;opacity:.9;direction:ltr}
+
 .card-body{
   padding:16px 36px 80px;
   display:grid;
@@ -152,7 +155,7 @@ button{
 <body>
 <div class="wrapper">
 
-<!-- ===== PANEL ===== -->
+<!-- ===== CONTROL PANEL ===== -->
 <div class="panel">
   <label for="empSelect">اختيار موظف</label>
   <select id="empSelect" onchange="selectEmployee()">
@@ -192,12 +195,14 @@ button{
   <label for="f_photo">الصورة الشخصية</label>
   <input type="file" id="f_photo" accept="image/*" onchange="loadPhoto(event)">
 
-  <button class="btn-primary" onclick="addEmployee()">إضافة</button>
-  <button class="btn-primary" onclick="updateEmployee()">تحديث</button>
+  <button class="btn-primary" onclick="addEmployee()">إضافة موظف</button>
+  <button class="btn-secondary" onclick="updateEmployee()">تحديث البيانات</button>
+
+  <div id="notice" class="notice"></div>
 </div>
 
 <!-- ===== CARD ===== -->
-<div class="card" id="card">
+<div class="card">
   <div class="card-header">
     <div class="company-ar">شركة المراسيل للتجارة العامة</div>
     <div class="company-en">Al Maraseel General Trading</div>
@@ -217,7 +222,7 @@ button{
     </div>
 
     <div class="photo-area">
-      <div class="photo"><img id="c_photo"></div>
+      <div class="photo"><img id="c_photo" alt="Employee Photo"></div>
       <svg id="barcode"></svg>
       <div class="qr-box"><div id="qrcode"></div></div>
     </div>
@@ -236,7 +241,14 @@ let currentPhotoUrl = "";
 
 const qs = id => document.getElementById(id);
 
-/* ===== Helpers ===== */
+function showNotice(msg,type="success"){
+  const n = qs("notice");
+  n.textContent = msg;
+  n.className = "notice " + type;
+  n.style.display = "block";
+  setTimeout(()=>n.style.display="none",3000);
+}
+
 function normalizeImageUrl(url){
   if(!url) return "";
   if(url.includes("drive.google.com/file/d/")){
@@ -246,7 +258,7 @@ function normalizeImageUrl(url){
   return url;
 }
 
-/* ===== Load ===== */
+/* ===== LOAD ===== */
 async function loadEmployees(){
   const r = await fetch(API_URL);
   const j = await r.json();
@@ -257,84 +269,84 @@ async function loadEmployees(){
   });
 }
 
-/* ===== Selection ===== */
+/* ===== SELECT ===== */
 function selectEmployee(){
   const i = qs("empSelect").value;
-  if(i === ""){
-    clearForm();
-    return;
-  }
+  if(i===""){ clearForm(); return; }
   const e = employees[i];
-  currentId = e.id || "";
+  currentId = e.id;
   currentPhotoUrl = e.photo_url || "";
 
-  qs("f_name").value  = e.name || "";
-  qs("f_job").value   = e.job || "";
-  qs("f_dept").value  = e.department || "";
-  qs("f_type").value  = e.type || "0";
-  qs("f_blood").value = e.blood || "";
-  qs("f_dob").value   = e.dob || "";
-  qs("f_exp").value   = e.expiry || "";
+  qs("f_name").value=e.name||"";
+  qs("f_job").value=e.job||"";
+  qs("f_dept").value=e.department||"";
+  qs("f_type").value=e.type||"0";
+  qs("f_blood").value=e.blood||"";
+  qs("f_dob").value=e.dob||"";
+  qs("f_exp").value=e.expiry||"";
 
   render(e);
 }
 
-/* ===== Render ===== */
+/* ===== PREVIEW ===== */
 function livePreview(){
   render({
-    id: currentId || "—",
-    name: qs("f_name").value,
-    job: qs("f_job").value,
-    department: qs("f_dept").value,
-    blood: qs("f_blood").value,
-    dob: qs("f_dob").value,
-    expiry: qs("f_exp").value,
-    photo_url: currentPhotoUrl
+    id:currentId||"—",
+    name:qs("f_name").value,
+    job:qs("f_job").value,
+    department:qs("f_dept").value,
+    blood:qs("f_blood").value,
+    dob:qs("f_dob").value,
+    expiry:qs("f_exp").value,
+    photo_url:currentPhotoUrl
   });
 }
 
 function render(e){
-  qs("c_name").textContent = e.name || "—";
-  qs("c_job").textContent = e.job || "—";
-  qs("c_dept").textContent = e.department || "—";
-  qs("c_blood").textContent = e.blood || "—";
-  qs("c_id").textContent = e.id || "—";
-  qs("c_dob").textContent = e.dob || "—";
-  qs("c_exp").textContent = e.expiry || "—";
+  qs("c_name").textContent=e.name||"—";
+  qs("c_job").textContent=e.job||"—";
+  qs("c_dept").textContent=e.department||"—";
+  qs("c_blood").textContent=e.blood||"—";
+  qs("c_id").textContent=e.id||"—";
+  qs("c_dob").textContent=e.dob||"—";
+  qs("c_exp").textContent=e.expiry||"—";
 
-  if(e.id && e.id !== "—"){
-    JsBarcode("#barcode", e.id, {displayValue:false});
-    qs("qrcode").innerHTML = "";
-    new QRCode(qs("qrcode"), {text:"https://almaraseel.com/emp/"+e.id,width:60,height:60});
+  if(e.id && e.id!=="—"){
+    JsBarcode("#barcode",e.id,{displayValue:false});
+    qs("qrcode").innerHTML="";
+    new QRCode(qs("qrcode"),{text:"https://almaraseel.com/emp/"+e.id,width:60,height:60});
   }
 
   if(e.photo_url){
-    qs("c_photo").src = normalizeImageUrl(e.photo_url);
-    qs("c_photo").style.display = "block";
+    qs("c_photo").src=normalizeImageUrl(e.photo_url);
+    qs("c_photo").style.display="block";
   }else{
-    qs("c_photo").style.display = "none";
+    qs("c_photo").style.display="none";
   }
 }
 
-/* ===== Photo ===== */
+/* ===== PHOTO ===== */
 function loadPhoto(ev){
-  const r = new FileReader();
-  r.onload = () => {
-    photoBase64 = r.result;
-    currentPhotoUrl = ""; // سيتم استبداله برابط جديد
-    qs("c_photo").src = r.result;
-    qs("c_photo").style.display = "block";
+  const r=new FileReader();
+  r.onload=()=>{
+    photoBase64=r.result;
+    currentPhotoUrl="";
+    qs("c_photo").src=r.result;
+    qs("c_photo").style.display="block";
   };
   r.readAsDataURL(ev.target.files[0]);
 }
 
 /* ===== API ===== */
 async function api(action,data){
-  const p = new URLSearchParams();
-  p.append("action",action);
-  Object.keys(data).forEach(k=>p.append(k,data[k]||""));
-  const r = await fetch(API_URL,{method:"POST",body:p});
-  return r.json();
+  const r=await fetch(API_URL+"?action="+action,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data)
+  });
+  const j=await r.json();
+  if(!j.ok) throw new Error();
+  return j;
 }
 
 async function addEmployee(){
@@ -346,14 +358,16 @@ async function addEmployee(){
     dob:qs("f_dob").value,
     expiry:qs("f_exp").value,
     type:qs("f_type").value,
-    photo_base64:photoBase64
+    photo_base64:photoBase64||""
   });
+  clearForm();
   photoBase64="";
   await loadEmployees();
+  showNotice("تمت إضافة الموظف بنجاح");
 }
 
 async function updateEmployee(){
-  if(!currentId) return;
+  if(!currentId){showNotice("اختر موظفًا أولاً","error");return;}
   await api("update",{
     id:currentId,
     name:qs("f_name").value,
@@ -363,10 +377,11 @@ async function updateEmployee(){
     dob:qs("f_dob").value,
     expiry:qs("f_exp").value,
     type:qs("f_type").value,
-    photo_base64: photoBase64
+    photo_base64:photoBase64||""
   });
   photoBase64="";
   await loadEmployees();
+  showNotice("تم تحديث البيانات");
 }
 
 function clearForm(){
