@@ -120,7 +120,7 @@ button{
 }
 
 .card-body{
-  padding:16px 36px 80px; /* مارجن سفلي للطباعة */
+  padding:16px 36px 80px;
   display:grid;
   grid-template-columns:1fr 200px;
   gap:26px;
@@ -181,12 +181,8 @@ button{
   display:none;
 }
 
-#barcode{
-  width:180px;
-  height:48px;
-}
+#barcode{width:180px;height:48px}
 
-/* ✅ QR داخل الهوية */
 .qr-box{
   width:72px;
   height:72px;
@@ -218,31 +214,31 @@ button{
 <div class="panel">
   <h2>بيانات الموظف</h2>
 
-  <label>اختيار موظف</label>
-  <select id="empSelect" onchange="selectEmployee()">
+  <label for="empSelect">اختيار موظف</label>
+  <select id="empSelect" aria-label="اختيار موظف" onchange="selectEmployee()">
     <option value="">—</option>
   </select>
 
-  <label>الاسم الكامل</label>
-  <input id="f_name" oninput="livePreview()">
+  <label for="f_name">الاسم الكامل</label>
+  <input id="f_name" aria-label="الاسم الكامل" oninput="livePreview()">
 
-  <label>المسمى الوظيفي</label>
-  <input id="f_job" oninput="livePreview()">
+  <label for="f_job">المسمى الوظيفي</label>
+  <input id="f_job" aria-label="المسمى الوظيفي" oninput="livePreview()">
 
-  <label>القسم</label>
-  <input id="f_dept" oninput="livePreview()">
+  <label for="f_dept">القسم</label>
+  <input id="f_dept" aria-label="القسم" oninput="livePreview()">
 
   <div class="row2">
     <div>
-      <label>نوع الموظف</label>
-      <select id="f_type" onchange="livePreview()">
+      <label for="f_type">نوع الموظف</label>
+      <select id="f_type" aria-label="نوع الموظف" onchange="livePreview()">
         <option value="0">خدمي</option>
         <option value="1">إداري</option>
       </select>
     </div>
     <div>
-      <label>فصيلة الدم</label>
-      <select id="f_blood" onchange="livePreview()">
+      <label for="f_blood">فصيلة الدم</label>
+      <select id="f_blood" aria-label="فصيلة الدم" onchange="livePreview()">
         <option value="">—</option>
         <option>O+</option><option>O-</option>
         <option>A+</option><option>A-</option>
@@ -254,17 +250,17 @@ button{
 
   <div class="row2">
     <div>
-      <label>تاريخ التولد</label>
-      <input type="date" id="f_dob" onchange="livePreview()">
+      <label for="f_dob">تاريخ التولد</label>
+      <input type="date" id="f_dob" aria-label="تاريخ التولد" onchange="livePreview()">
     </div>
     <div>
-      <label>تاريخ الصلاحية</label>
-      <input type="date" id="f_exp" onchange="livePreview()">
+      <label for="f_exp">تاريخ الصلاحية</label>
+      <input type="date" id="f_exp" aria-label="تاريخ الصلاحية" onchange="livePreview()">
     </div>
   </div>
 
-  <label>الصورة الشخصية</label>
-  <input type="file" accept="image/*" onchange="loadPhoto(event)">
+  <label for="f_photo">الصورة الشخصية</label>
+  <input type="file" id="f_photo" aria-label="الصورة الشخصية" accept="image/*" onchange="loadPhoto(event)">
 
   <button class="btn-primary" onclick="addEmployee()">إضافة موظف</button>
   <button class="btn-primary" onclick="updateEmployee()">تحديث</button>
@@ -296,9 +292,11 @@ button{
     </div>
 
     <div class="photo-area">
-      <div class="photo"><img id="c_photo"></div>
-      <svg id="barcode"></svg>
-      <div class="qr-box"><div id="qrcode"></div></div>
+      <div class="photo">
+        <img id="c_photo" alt="الصورة الشخصية للموظف" title="الصورة الشخصية">
+      </div>
+      <svg id="barcode" aria-label="Barcode for Employee ID"></svg>
+      <div class="qr-box"><div id="qrcode" aria-label="QR Code"></div></div>
     </div>
   </div>
 </div>
@@ -313,17 +311,25 @@ let employees=[], currentId="", photoBase64="";
 const qs=id=>document.getElementById(id);
 const noticeBox=qs("notice");
 
+/* ===== Helpers ===== */
 function showNotice(msg,type="success"){
   noticeBox.textContent=msg;
   noticeBox.className="notice "+type;
   noticeBox.style.display="block";
-  noticeBox.style.opacity="1";
-  setTimeout(()=>{
-    noticeBox.style.opacity="0";
-    setTimeout(()=>noticeBox.style.display="none",300);
-  },3000);
+  setTimeout(()=>noticeBox.style.display="none",3000);
 }
 
+/* 🔑 تحويل روابط Google Drive تلقائياً */
+function normalizeImageUrl(url){
+  if(!url) return "";
+  if(url.includes("drive.google.com/file/d/")){
+    const id = url.split("/d/")[1].split("/")[0];
+    return "https://drive.google.com/uc?export=view&id=" + id;
+  }
+  return url;
+}
+
+/* ===== API ===== */
 async function api(action,data){
   const p=new URLSearchParams();
   p.append("action",action);
@@ -340,10 +346,11 @@ async function loadEmployees(){
   employees=j.data||[];
   qs("empSelect").innerHTML='<option value="">—</option>';
   employees.forEach((e,i)=>{
-    qs("empSelect").innerHTML+=`<option value="${i}">${e.id} — ${e.name}</option>`;
+    qs("empSelect").innerHTML+=`<option value="${i}">${e.id} — ${e.name||""}</option>`;
   });
 }
 
+/* ===== Rendering ===== */
 function livePreview(){
   render({
     id: currentId || "—",
@@ -353,7 +360,7 @@ function livePreview(){
     blood: qs("f_blood").value,
     dob: qs("f_dob").value,
     expiry: qs("f_exp").value,
-    photo_url: qs("c_photo").src || ""
+    photo_url: qs("c_photo").src
   });
 }
 
@@ -370,17 +377,16 @@ function render(e){
     JsBarcode("#barcode",e.id,{displayValue:false});
     qs("qrcode").innerHTML="";
     new QRCode(qs("qrcode"),{text:"https://almaraseel.com/emp/"+e.id,width:60,height:60});
-  }else{
-    qs("barcode").innerHTML="";
-    qs("qrcode").innerHTML="";
   }
 
   if(e.photo_url){
-    qs("c_photo").src=e.photo_url;
+    const imgUrl = normalizeImageUrl(e.photo_url);
+    qs("c_photo").src = imgUrl;
     qs("c_photo").style.display="block";
   }
 }
 
+/* ===== Selection ===== */
 function selectEmployee(){
   const i=qs("empSelect").value;
   if(i===""){clearForm();return}
@@ -406,6 +412,7 @@ function clearForm(){
   render({});
 }
 
+/* ===== Photo ===== */
 function loadPhoto(ev){
   const r=new FileReader();
   r.onload=()=>{
@@ -416,6 +423,7 @@ function loadPhoto(ev){
   r.readAsDataURL(ev.target.files[0]);
 }
 
+/* ===== Actions ===== */
 async function addEmployee(){
   try{
     await api("create",{
