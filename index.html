@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نظام إصدار هويات الموظفين</title>
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+:root{
+  --navy:#072a4e;
+  --border:#e2e8f0;
+  --bg:#f1f5f9;
+  --text:#1e293b;
+  --muted:#64748b;
+  --success:#16a34a;
+  --danger:#b91c1c;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  padding:30px;
+  background:var(--bg);
+  font-family:Inter,"IBM Plex Sans Arabic",sans-serif;
+}
+.wrapper{
+  max-width:1200px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:360px 1fr;
+  gap:30px;
+}
+
+/* ===== Panel ===== */
+.panel{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+}
+.panel h2{
+  margin:0 0 14px;
+  font-size:16px;
+  color:var(--navy);
+}
+label{
+  font-size:12px;
+  font-weight:700;
+  display:block;
+  margin-bottom:4px;
+}
+input,select{
+  width:100%;
+  padding:9px 10px;
+  margin-bottom:12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  font-family:inherit;
+}
+.row2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+button{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  border-radius:10px;
+  border:none;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-secondary{background:#fff;border:1px solid var(--border);color:var(--navy)}
+
+.notice{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  font-size:13px;
+  display:none;
+}
+.notice.success{background:#dcfce7;color:var(--success)}
+.notice.error{background:#fee2e2;color:var(--danger)}
+
+/* ===== Card ===== */
+.card{
+  width:800px;
+  height:520px;
+  background:#fff;
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 20px 30px rgba(0,0,0,.12);
+  position:relative;
+}
+.card-header{
+  height:140px;
+  background:linear-gradient(135deg,#041c33,#072a4e,#0b3b6d);
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+}
+.company-ar{
+  font-size:26px;
+  font-weight:800;
+  font-family:"IBM Plex Sans Arabic",sans-serif;
+}
+.company-en{
+  font-size:15px;
+  opacity:.9;
+  direction:ltr;
+}
+
+.card-body{
+  padding:16px 36px 80px; /* مارجن سفلي للطباعة */
+  display:grid;
+  grid-template-columns:1fr 200px;
+  gap:26px;
+}
+
+.emp-name{
+  font-family:"IBM Plex Sans Arabic",sans-serif;
+  font-size:28px;
+  font-weight:800;
+  color:var(--navy);
+  margin-bottom:14px;
+}
+
+.data-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.box{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px 14px;
+}
+.box.full{grid-column:span 2}
+.lbl{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:700;
+}
+.val{
+  font-size:18px;
+  font-weight:700;
+}
+.val.ltr{direction:ltr}
+
+/* ===== Photo + Codes ===== */
+.photo-area{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+.photo{
+  width:180px;
+  height:200px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:#f8fafc;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.photo img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:none;
+}
+
+#barcode{
+  width:180px;
+  height:48px;
+}
+
+/* ✅ QR داخل الهوية */
+.qr-box{
+  width:72px;
+  height:72px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#fff;
+}
+
+@media print{
+  body{margin:0;padding:0;background:#fff}
+  .wrapper,.panel{display:none}
+  .card{
+    position:absolute;
+    top:0;right:0;
+    box-shadow:none;
+    border-radius:0;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="wrapper">
+
+<!-- ===== PANEL ===== -->
+<div class="panel">
+  <h2>بيانات الموظف</h2>
+
+  <label>اختيار موظف</label>
+  <select id="empSelect" onchange="selectEmployee()">
+    <option value="">—</option>
+  </select>
+
+  <label>الاسم الكامل</label>
+  <input id="f_name" oninput="livePreview()">
+
+  <label>المسمى الوظيفي</label>
+  <input id="f_job" oninput="livePreview()">
+
+  <label>القسم</label>
+  <input id="f_dept" oninput="livePreview()">
+
+  <div class="row2">
+    <div>
+      <label>نوع الموظف</label>
+      <select id="f_type" onchange="livePreview()">
+        <option value="0">خدمي</option>
+        <option value="1">إداري</option>
+      </select>
+    </div>
+    <div>
+      <label>فصيلة الدم</label>
+      <select id="f_blood" onchange="livePreview()">
+        <option value="">—</option>
+        <option>O+</option><option>O-</option>
+        <option>A+</option><option>A-</option>
+        <option>B+</option><option>B-</option>
+        <option>AB+</option><option>AB-</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row2">
+    <div>
+      <label>تاريخ التولد</label>
+      <input type="date" id="f_dob" onchange="livePreview()">
+    </div>
+    <div>
+      <label>تاريخ الصلاحية</label>
+      <input type="date" id="f_exp" onchange="livePreview()">
+    </div>
+  </div>
+
+  <label>الصورة الشخصية</label>
+  <input type="file" accept="image/*" onchange="loadPhoto(event)">
+
+  <button class="btn-primary" onclick="addEmployee()">إضافة موظف</button>
+  <button class="btn-primary" onclick="updateEmployee()">تحديث</button>
+  <button class="btn-secondary" onclick="deleteEmployee()">حذف</button>
+  <button class="btn-secondary" onclick="window.print()">طباعة</button>
+  <button class="btn-secondary" onclick="downloadCard()">تحميل الهوية</button>
+
+  <div id="notice" class="notice"></div>
+</div>
+
+<!-- ===== CARD ===== -->
+<div class="card" id="card">
+  <div class="card-header">
+    <div class="company-ar">شركة المراسيل للتجارة العامة</div>
+    <div class="company-en">Al Maraseel General Trading</div>
+  </div>
+
+  <div class="card-body">
+    <div>
+      <div class="emp-name" id="c_name">—</div>
+      <div class="data-grid">
+        <div class="box full"><div class="lbl">المسمى الوظيفي</div><div class="val" id="c_job">—</div></div>
+        <div class="box"><div class="lbl">القسم</div><div class="val" id="c_dept">—</div></div>
+        <div class="box"><div class="lbl">فصيلة الدم</div><div class="val ltr" id="c_blood">—</div></div>
+        <div class="box full"><div class="lbl">رقم الموظف</div><div class="val ltr" id="c_id">—</div></div>
+        <div class="box"><div class="lbl">تاريخ التولد</div><div class="val" id="c_dob">—</div></div>
+        <div class="box"><div class="lbl">تاريخ الصلاحية</div><div class="val" id="c_exp">—</div></div>
+      </div>
+    </div>
+
+    <div class="photo-area">
+      <div class="photo"><img id="c_photo"></div>
+      <svg id="barcode"></svg>
+      <div class="qr-box"><div id="qrcode"></div></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyMxhTUCG7TZtHLBvH05yX2QA8ApHteGg3TQ2Hq3QsGXKHXBrpt5gTFnWbVcBCgH8ZY9Q/exec";
+
+let employees=[], currentId="", photoBase64="";
+
+const qs=id=>document.getElementById(id);
+const noticeBox=qs("notice");
+
+function showNotice(msg,type="success"){
+  noticeBox.textContent=msg;
+  noticeBox.className="notice "+type;
+  noticeBox.style.display="block";
+  noticeBox.style.opacity="1";
+  setTimeout(()=>{
+    noticeBox.style.opacity="0";
+    setTimeout(()=>noticeBox.style.display="none",300);
+  },3000);
+}
+
+async function api(action,data){
+  const p=new URLSearchParams();
+  p.append("action",action);
+  Object.keys(data).forEach(k=>p.append(k,data[k]||""));
+  const r=await fetch(API_URL,{method:"POST",body:p});
+  const j=await r.json();
+  if(!j.ok) throw j.error;
+  return j;
+}
+
+async function loadEmployees(){
+  const r=await fetch(API_URL);
+  const j=await r.json();
+  employees=j.data||[];
+  qs("empSelect").innerHTML='<option value="">—</option>';
+  employees.forEach((e,i)=>{
+    qs("empSelect").innerHTML+=`<option value="${i}">${e.id} — ${e.name}</option>`;
+  });
+}
+
+function livePreview(){
+  render({
+    id: currentId || "—",
+    name: qs("f_name").value,
+    job: qs("f_job").value,
+    department: qs("f_dept").value,
+    blood: qs("f_blood").value,
+    dob: qs("f_dob").value,
+    expiry: qs("f_exp").value,
+    photo_url: qs("c_photo").src || ""
+  });
+}
+
+function render(e){
+  qs("c_name").textContent=e.name||"—";
+  qs("c_job").textContent=e.job||"—";
+  qs("c_dept").textContent=e.department||"—";
+  qs("c_blood").textContent=e.blood||"—";
+  qs("c_id").textContent=e.id||"—";
+  qs("c_dob").textContent=e.dob||"—";
+  qs("c_exp").textContent=e.expiry||"—";
+
+  if(e.id && e.id!=="—"){
+    JsBarcode("#barcode",e.id,{displayValue:false});
+    qs("qrcode").innerHTML="";
+    new QRCode(qs("qrcode"),{text:"https://almaraseel.com/emp/"+e.id,width:60,height:60});
+  }else{
+    qs("barcode").innerHTML="";
+    qs("qrcode").innerHTML="";
+  }
+
+  if(e.photo_url){
+    qs("c_photo").src=e.photo_url;
+    qs("c_photo").style.display="block";
+  }
+}
+
+function selectEmployee(){
+  const i=qs("empSelect").value;
+  if(i===""){clearForm();return}
+  const e=employees[i];
+  currentId=e.id;
+  qs("f_name").value=e.name;
+  qs("f_job").value=e.job;
+  qs("f_dept").value=e.department;
+  qs("f_type").value=e.type;
+  qs("f_blood").value=e.blood;
+  qs("f_dob").value=e.dob;
+  qs("f_exp").value=e.expiry;
+  render(e);
+}
+
+function clearForm(){
+  currentId="";
+  ["f_name","f_job","f_dept","f_dob","f_exp"].forEach(id=>qs(id).value="");
+  qs("f_type").value="0";
+  qs("f_blood").value="";
+  qs("empSelect").value="";
+  photoBase64="";
+  render({});
+}
+
+function loadPhoto(ev){
+  const r=new FileReader();
+  r.onload=()=>{
+    photoBase64=r.result;
+    qs("c_photo").src=r.result;
+    qs("c_photo").style.display="block";
+  };
+  r.readAsDataURL(ev.target.files[0]);
+}
+
+async function addEmployee(){
+  try{
+    await api("create",{
+      name:qs("f_name").value,
+      job:qs("f_job").value,
+      department:qs("f_dept").value,
+      blood:qs("f_blood").value,
+      dob:qs("f_dob").value,
+      expiry:qs("f_exp").value,
+      type:qs("f_type").value,
+      photo_base64:photoBase64
+    });
+    await loadEmployees();
+    clearForm();
+    showNotice("تمت إضافة الموظف بنجاح");
+  }catch(e){showNotice(e,"error")}
+}
+
+async function updateEmployee(){
+  if(!currentId) return showNotice("اختر موظفًا للتعديل","error");
+  try{
+    await api("update",{
+      id:currentId,
+      name:qs("f_name").value,
+      job:qs("f_job").value,
+      department:qs("f_dept").value,
+      blood:qs("f_blood").value,
+      dob:qs("f_dob").value,
+      expiry:qs("f_exp").value,
+      type:qs("f_type").value,
+      photo_base64:photoBase64
+    });
+    await loadEmployees();
+    clearForm();
+    showNotice("تم تحديث بيانات الموظف");
+  }catch(e){showNotice(e,"error")}
+}
+
+async function deleteEmployee(){
+  if(!currentId) return showNotice("اختر موظفًا للحذف","error");
+  if(!confirm("هل أنت متأكد من حذف الموظف؟")) return;
+  try{
+    await api("delete",{id:currentId});
+    await loadEmployees();
+    clearForm();
+    showNotice("تم حذف الموظف");
+  }catch(e){showNotice(e,"error")}
+}
+
+function downloadCard(){
+  html2canvas(qs("card"),{scale:2}).then(c=>{
+    const a=document.createElement("a");
+    a.href=c.toDataURL();
+    a.download="employee-id.png";
+    a.click();
+  });
+}
+
+loadEmployees();
+</script>
+</body>
+</html>
